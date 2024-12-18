@@ -1,6 +1,6 @@
 import torch
 from torchvision import transforms
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 from model import EAST
 import os
 from dataset import get_rotate_mat
