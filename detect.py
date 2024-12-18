@@ -147,21 +147,25 @@ def detect(img, model, device):
 	return adjust_ratio(boxes, ratio_w, ratio_h)
 
 
-def plot_boxes(image, boxes, score=None):
+def plot_boxes(image, boxes, score_tensor):
     draw = ImageDraw.Draw(image)
-    try:
-        font = ImageFont.load_default()
-    except IOError:
-        font = None  
     for i, box in enumerate(boxes):
         box_coords = [tuple(map(int, box[i:i + 2])) for i in range(0, len(box), 2)]
-        score = box[-1]
-        draw.polygon(box, outline=(0, 255, 0), width=2)
-        score_text = f'{score:.2f}'
+        x_min, y_min = box_coords[0]
+        x_max, y_max = box_coords[2]  # Adjust if necessary for your box format
+        avg_score = calculate_score_in_bbox(score_tensor, (x_min, y_min, x_max, y_max))
+        draw.polygon(box_coords, outline='green', width=2)
+        score_text = f'{avg_score:.2f}'  # Confidence score formatted to 2 decimal places
+        try:
+            font = ImageFont.load_default()
+        except IOError:
+            font = None  # If loading fails, no font will be used
+            
         if font:
-            draw.text((box_coords[0][0], box_coords[0][1] - 10), score_text, fill=(0, 255, 0), font=font)
+            draw.text((box_coords[0][0], box_coords[0][1] - 10), score_text, fill='red', font=font)
         else:
-            draw.text((box_coords[0][0], box_coords[0][1] - 10), score_text, fill=(0, 255, 0))
+            draw.text((box_coords[0][0], box_coords[0][1] - 10), score_text, fill='red')
+
     return image
 
 
