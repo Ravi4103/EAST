@@ -147,24 +147,45 @@ def detect(img, model, device):
 	return adjust_ratio(boxes, ratio_w, ratio_h)
 
 
-def plot_boxes(image, boxes, score_tensor):
+
+def plot_boxes(image, boxes, score_map):
+    """
+    Plot bounding boxes with confidence scores on the given image.
+    
+    Args:
+        image (PIL.Image): The image to draw on.
+        boxes (list): List of bounding boxes [[x1, y1, x2, y2, ...], ...].
+        score_map (numpy.ndarray): The score tensor used to compute confidence scores.
+    
+    Returns:
+        PIL.Image: Image with bounding boxes and confidence scores.
+    """
     draw = ImageDraw.Draw(image)
-    for i, box in enumerate(boxes):
-        box_coords = [tuple(map(int, box[i:i + 2])) for i in range(0, len(box), 2)]
-        x_min, y_min = box_coords[0]
-        x_max, y_max = box_coords[2]  # Adjust if necessary for your box format
-        avg_score = calculate_score_in_bbox(score_tensor, (x_min, y_min, x_max, y_max))
-        draw.polygon(box_coords, outline='green', width=2)
-        score_text = f'{avg_score:.2f}'  # Confidence score formatted to 2 decimal places
-        try:
-            font = ImageFont.load_default()
-        except IOError:
-            font = None  # If loading fails, no font will be used
-            
+
+    try:
+        font = ImageFont.load_default()
+    except IOError:
+        font = None  # Fallback if font loading fails
+    for box in boxes:
+        box_coords = [tuple(map(int, box[i:i+2])) for i in range(0, 8, 2)]
+        # Calculate the average confidence score in the bounding box region
+        x_min = int(min(p[0] for p in box_coords))
+        x_max = int(max(p[0] for p in box_coords))
+        y_min = int(min(p[1] for p in box_coords))
+        y_max = int(max(p[1] for p in box_coords))
+
+        confidence_score = score_map[y_min:y_max, x_min:x_max].mean()
+        confidence_text = f'{confidence_score:.2f}'
+
+        # Draw the bounding box
+        draw.polygon(box_coords, outline='red', width=2)
+
+        # Display the confidence score near the top-left corner of the box
+        text_position = (box_coords[0][0], box_coords[0][1] - 10)
         if font:
-            draw.text((box_coords[0][0], box_coords[0][1] - 10), score_text, fill='red', font=font)
+            draw.text(text_position, confidence_text, fill='green', font=font)
         else:
-            draw.text((box_coords[0][0], box_coords[0][1] - 10), score_text, fill='red')
+            draw.text(text_position, confidence_text, fill='green')
 
     return image
 
