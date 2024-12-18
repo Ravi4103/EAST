@@ -168,11 +168,6 @@ class EAST(nn.Module):
 		return self.output(self.merge(self.extractor(x)))
 
 
-def calculate_bbox_confidence(score_tensor, geo_tensor):
-    score_np = score_tensor.squeeze().cpu().numpy()
-    loc = geo_tensor[:, :4, :, :].squeeze().cpu().numpy()
-    avg_conf = [np.mean(score_np[int(loc[i][1]):int(loc[i][1]+loc[i][3]), int(loc[i][0]):int(loc[i][0]+loc[i][2])]) for i in range(loc.shape[0])]
-    return avg_conf
 		
 
 if __name__ == '__main__':
@@ -181,5 +176,3 @@ if __name__ == '__main__':
 	score, geo = m(x)
 	print(score.shape)
 	print(geo.shape)
-	confidence_scores = calculate_bbox_confidence(score, geo)
-    	print("Confidence Scores:", confidence_scores)
