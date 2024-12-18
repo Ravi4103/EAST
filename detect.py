@@ -146,46 +146,62 @@ def detect(img, model, device):
 	boxes = get_boxes(score.squeeze(0).cpu().numpy(), geo.squeeze(0).cpu().numpy())
 	return adjust_ratio(boxes, ratio_w, ratio_h)
 
-
-
-def plot_boxes(image, boxes, score_map):
+def calculate_score_in_bbox(score_tensor, box):
     """
-    Plot bounding boxes with confidence scores on the given image.
-    
-    Args:
-        image (PIL.Image): The image to draw on.
-        boxes (list): List of bounding boxes [[x1, y1, x2, y2, ...], ...].
-        score_map (numpy.ndarray): The score tensor used to compute confidence scores.
-    
-    Returns:
-        PIL.Image: Image with bounding boxes and confidence scores.
+    Calculate the average confidence score within a bounding box.
+    :param score_tensor: Tensor containing confidence scores.
+    :param box: Bounding box coordinates [x1, y1, x2, y2].
+    :return: Average confidence score for pixels inside the bounding box.
+    """
+    x_min = int(min(box[0], box[2]))
+    y_min = int(min(box[1], box[3]))
+    x_max = int(max(box[0], box[2]))
+    y_max = int(max(box[1], box[3]))
+
+    # Ensure the bounding box is within the bounds of the score tensor
+    x_min = max(0, x_min)
+    y_min = max(0, y_min)
+    x_max = min(score_tensor.shape[1] - 1, x_max)
+    y_max = min(score_tensor.shape[0] - 1, y_max)
+
+    # Extract the region inside the bounding box
+    bbox_scores = score_tensor[y_min:y_max+1, x_min:x_max+1]
+
+    # Calculate and return the average score
+    if bbox_scores.size == 0:
+        return 0.0  # Avoid division by zero
+    return float(np.mean(bbox_scores))
+
+def plot_boxes(image, boxes, score_tensor):
+    """
+    Draw bounding boxes and confidence scores on an image.
+    :param image: PIL Image object to draw on.
+    :param boxes: List of bounding box coordinates [x1, y1, x2, y2].
+    :param score_tensor: Tensor containing confidence scores.
+    :return: PIL Image object with drawn bounding boxes.
     """
     draw = ImageDraw.Draw(image)
-
     try:
+        # Load a basic font for text rendering
         font = ImageFont.load_default()
     except IOError:
         font = None  # Fallback if font loading fails
+
     for box in boxes:
-        box_coords = [tuple(map(int, box[i:i+2])) for i in range(0, 8, 2)]
-        # Calculate the average confidence score in the bounding box region
-        x_min = int(min(p[0] for p in box_coords))
-        x_max = int(max(p[0] for p in box_coords))
-        y_min = int(min(p[1] for p in box_coords))
-        y_max = int(max(p[1] for p in box_coords))
+        # Draw the bounding box (rectangle)
+        x1, y1, x2, y2 = box[:4]  # First 4 coordinates define the bounding box
+        draw.rectangle([x1, y1, x2, y2], outline=(0, 255, 0), width=2)
 
-        confidence_score = score_map[y_min:y_max, x_min:x_max].mean()
-        confidence_text = f'{confidence_score:.2f}'
+        # Calculate confidence score for the bounding box
+        confidence_score = calculate_score_in_bbox(score_tensor, box)
 
-        # Draw the bounding box
-        draw.polygon(box_coords, outline='red', width=2)
-
-        # Display the confidence score near the top-left corner of the box
-        text_position = (box_coords[0][0], box_coords[0][1] - 10)
+        # Display the confidence score as text above the box
+        score_text = f'{confidence_score:.2f}'
+        text_position = (x1, y1 - 10)  # Slightly above the top-left corner
         if font:
-            draw.text(text_position, confidence_text, fill='green', font=font)
+            draw.text(text_position, score_text, fill=(255, 0, 0), font=font)
         else:
-            draw.text(text_position, confidence_text, fill='green')
+            draw.text(text_position, score_text, fill=(255, 0, 0))
 
     return image
 
