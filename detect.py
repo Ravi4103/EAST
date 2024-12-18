@@ -147,16 +147,22 @@ def detect(img, model, device):
 	return adjust_ratio(boxes, ratio_w, ratio_h)
 
 
-def plot_boxes(img, boxes):
-	'''plot boxes on image
-	'''
-	if boxes is None:
-		return img
-	
-	draw = ImageDraw.Draw(img)
-	for box in boxes:
-		draw.polygon([box[0], box[1], box[2], box[3], box[4], box[5], box[6], box[7]], outline=(0,255,0))
-	return img
+def plot_boxes(image, boxes, score=None):
+    draw = ImageDraw.Draw(image)
+    try:
+        font = ImageFont.load_default()
+    except IOError:
+        font = None  
+    for i, box in enumerate(boxes):
+        box_coords = [tuple(map(int, box[i:i + 2])) for i in range(0, len(box), 2)]
+        score = box[-1]
+        draw.polygon(box, outline=(0, 255, 0), width=2)
+        score_text = f'{score:.2f}'
+        if font:
+            draw.text((box_coords[0][0], box_coords[0][1] - 10), score_text, fill=(0, 255, 0), font=font)
+        else:
+            draw.text((box_coords[0][0], box_coords[0][1] - 10), score_text, fill=(0, 255, 0))
+    return image
 
 
 def detect_dataset(model, device, test_img_path, submit_path):
