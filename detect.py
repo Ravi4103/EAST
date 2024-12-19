@@ -179,7 +179,7 @@ def calculate_score_in_bbox(score_map, box, image_width, image_height, downscale
     return float(np.mean(bbox_scores))
 
 
-def plot_boxes(image, boxes, score_map, downscale_factor=None):
+def plot_boxes(image, boxes, score_map, image_width, image_height, downscale_factor=None):
     if boxes is None:
         return image
     draw = ImageDraw.Draw(image)
