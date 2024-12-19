@@ -170,8 +170,8 @@ def calculate_score_in_bbox(score_map, box, downscale_factor=4):
 
 def plot_boxes(image, boxes, score_map, downscale_factor=4):
 	if boxes is None:
-        	return image
-    	draw = ImageDraw.Draw(image)
+		return image
+    draw = ImageDraw.Draw(image)
 	for box in boxes:
 		if len(box) < 8:
 		    print(f"Skipping invalid box: {box}")
