@@ -166,7 +166,7 @@ def calculate_score_in_bbox(score_tensor, box):
 
 def plot_boxes(image, boxes, score_tensor):
 	if boxes is None:
-	return image
+		return image
 	draw = ImageDraw.Draw(image)
 	for box in boxes:
 	if len(box) < 8:
