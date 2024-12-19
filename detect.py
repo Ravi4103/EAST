@@ -163,15 +163,13 @@ def calculate_score_in_bbox(score_tensor, box):
     y_min = max(0, y_min)
     x_max = min(score_tensor.shape[1] - 1, x_max)
     y_max = min(score_tensor.shape[0] - 1, y_max)
-
     # Extract the region inside the bounding box
     bbox_scores = score_tensor[y_min:y_max+1, x_min:x_max+1]
-
     # Calculate and return the average score
     if bbox_scores.size == 0:
         return 0.0  # Avoid division by zero
     return float(np.mean(bbox_scores))
-
+	
 def plot_boxes(image, boxes, score_tensor):
     """
     Draw bounding boxes and confidence scores on an image.
