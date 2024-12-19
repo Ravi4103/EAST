@@ -189,13 +189,15 @@ def plot_boxes(image, boxes, score_map, downscale_factor=4):
             continue
         # Calculate the confidence score
         confidence_score = calculate_score_in_bbox(score_map, box[:8], image_width, image_height, downscale_factor)
-        # Draw the bounding box and confidence score
+        # Draw the bounding box
         draw.polygon(box[:8], outline=(0, 255, 0), width=2)
-	x_coords = box[0::2]  # Even indices are x-coordinates
+        # Calculate the centroid of the bounding box
+        x_coords = box[0::2]  # Even indices are x-coordinates
         y_coords = box[1::2]  # Odd indices are y-coordinates
         centroid_x = sum(x_coords) / len(x_coords)
         centroid_y = sum(y_coords) / len(y_coords)
-        draw.text((centroid_x, centroid_y - 10), f"{confidence_score:.2f}", fill=(0, 255, 0))
+        # Draw the confidence score at the centroid
+        draw.text((centroid_x, centroid_y - 10), f"{confidence_score:.2f}", fill=(255, 0, 0))
     return image
 
 def detect_dataset(model, device, test_img_path, submit_path):
