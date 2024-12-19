@@ -165,48 +165,19 @@ def calculate_score_in_bbox(score_tensor, box):
 
 
 def plot_boxes(image, boxes, score_tensor):
-    '''Plot boxes with confidence scores on the image.'''
-    if boxes is None or score_tensor is None:
+    if boxes is None:
         return image
-    # Ensure score_tensor has the correct dimensions
-    if len(score_tensor.shape) == 3:  # [C, H, W]
-        score_tensor = score_tensor[0]  # Use the first channel
     draw = ImageDraw.Draw(image)
-    try:
-        font = ImageFont.load_default()
-    except IOError:
-        font = None  # Fallback if font loading fails
-    image_w, image_h = image.size
-    score_h, score_w = score_tensor.shape
-    scale_x = score_w / image_w
-    scale_y = score_h / image_h
     for box in boxes:
-        # Get the bounding box coordinates
-        x_min = min(box[0], box[2], box[4], box[6])
-        y_min = min(box[1], box[3], box[5], box[7])
-        x_max = max(box[0], box[2], box[4], box[6])
-        y_max = max(box[1], box[3], box[5], box[7])
-
-        # Scale coordinates for score tensor
-        scaled_x_min = int(x_min * scale_x)
-        scaled_y_min = int(y_min * scale_y)
-        scaled_x_max = int(x_max * scale_x)
-        scaled_y_max = int(y_max * scale_y)
-
-        # Calculate the confidence score using calculate_score_in_bbox
-        confidence_score = calculate_score_in_bbox(
-            score_tensor, [scaled_x_min, scaled_y_min, scaled_x_max, scaled_y_max]
-        )
-
-        # Draw the bounding box
-        draw.polygon(box[:8], outline=(0, 255, 0))
-        # Draw the confidence score
-        score_text = f'{confidence_score:.2f}'
-        text_position = (x_min, y_min - 10)  # Slightly above the box
-        if font:
-            draw.text(text_position, score_text, fill=(0, 255, 0), font=font)
-        else:
-            draw.text(text_position, score_text, fill=(0, 255, 0))
+        if len(box) < 8:
+            print(f"Skipping invalid box: {box}")
+            continue
+        # Calculate the confidence score
+        confidence_score = calculate_score_in_bbox(score_tensor, box[:8])
+        # Draw the bounding box and score
+        draw.polygon(box[:8], outline=(0, 255, 0), width=2)
+	x_min, y_min = min(box[0::2]), min(box[1::2])
+        draw.text((x_min, y_min - 10), f"{confidence_score:.2f}", fill=(0, 255, 0))
     return image
 
 def detect_dataset(model, device, test_img_path, submit_path):
