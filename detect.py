@@ -147,38 +147,38 @@ def detect(img, model, device):
 	return adjust_ratio(boxes, ratio_w, ratio_h)
 
 def calculate_score_in_bbox(score_tensor, box):
-    '''Calculate confidence score for a bounding box'''
-    x_min = int(min(box[0], box[2], box[4], box[6]))
-    y_min = int(min(box[1], box[3], box[5], box[7]))
-    x_max = int(max(box[0], box[2], box[4], box[6]))
-    y_max = int(max(box[1], box[3], box[5], box[7]))
-
-    x_min = max(0, x_min)
-    y_min = max(0, y_min)
-    x_max = min(score_tensor.shape[1] - 1, x_max)
-    y_max = min(score_tensor.shape[0] - 1, y_max)
-
-    bbox_scores = score_tensor[y_min:y_max + 1, x_min:x_max + 1]
-    if bbox_scores.size == 0:
-        return 0.0
-    return float(np.mean(bbox_scores))
+	    '''Calculate confidence score for a bounding box'''
+	    x_min = int(min(box[0], box[2], box[4], box[6]))
+	    y_min = int(min(box[1], box[3], box[5], box[7]))
+	    x_max = int(max(box[0], box[2], box[4], box[6]))
+	    y_max = int(max(box[1], box[3], box[5], box[7]))
+	
+	    x_min = max(0, x_min)
+	    y_min = max(0, y_min)
+	    x_max = min(score_tensor.shape[1] - 1, x_max)
+	    y_max = min(score_tensor.shape[0] - 1, y_max)
+	
+	    bbox_scores = score_tensor[y_min:y_max + 1, x_min:x_max + 1]
+	    if bbox_scores.size == 0:
+	        return 0.0
+	    return float(np.mean(bbox_scores))
 
 
 def plot_boxes(image, boxes, score_tensor):
-    if boxes is None:
-        return image
-    draw = ImageDraw.Draw(image)
-    for box in boxes:
-        if len(box) < 8:
-            print(f"Skipping invalid box: {box}")
-            continue
-        # Calculate the confidence score
-        confidence_score = calculate_score_in_bbox(score_tensor, box[:8])
-        # Draw the bounding box and score
-        draw.polygon(box[:8], outline=(0, 255, 0), width=2)
+	if boxes is None:
+	return image
+	draw = ImageDraw.Draw(image)
+	for box in boxes:
+	if len(box) < 8:
+	    print(f"Skipping invalid box: {box}")
+	    continue
+	# Calculate the confidence score
+	confidence_score = calculate_score_in_bbox(score_tensor, box[:8])
+	# Draw the bounding box and score
+	draw.polygon(box[:8], outline=(0, 255, 0), width=2)
 	x_min, y_min = min(box[0::2]), min(box[1::2])
-        draw.text((x_min, y_min - 10), f"{confidence_score:.2f}", fill=(0, 255, 0))
-    return image
+	draw.text((x_min, y_min - 10), f"{confidence_score:.2f}", fill=(0, 255, 0))
+	return image
 
 def detect_dataset(model, device, test_img_path, submit_path):
 	'''detection on whole dataset, save .txt results in submit_path
