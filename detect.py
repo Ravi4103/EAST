@@ -146,6 +146,15 @@ def detect(img, model, device):
 	boxes = get_boxes(score.squeeze(0).cpu().numpy(), geo.squeeze(0).cpu().numpy())
 	return adjust_ratio(boxes, ratio_w, ratio_h)
 
+def validate_bbox(bbox, image_width, image_height):
+    x_min, y_min, x_max, y_max = bbox[0], bbox[1], bbox[4], bbox[5] # Updated to use correct indices for x_max and y_max
+    if not (0 <= x_min < image_width and 0 <= y_min < image_height and
+            0 <= x_max < image_width and 0 <= y_max < image_height):
+        return False
+    if not (x_min < x_max and y_min < y_max):
+        return False
+    return True  # Bounding box is valid
+
 def scale_bbox(box, downscale_factor):
     return [coord / downscale_factor for coord in box]
 
@@ -156,14 +165,16 @@ def clamp_bbox(box, score_map_shape):
     y_max = min(score_map_shape[0] - 1, int(max(box[1], box[3], box[5], box[7])))
     return x_min, y_min, x_max, y_max
 
-def calculate_score_in_bbox(score_map, box, downscale_factor=4):
-    # Rescale and clamp the bounding box
+def calculate_score_in_bbox(score_map, box, image_width, image_height, downscale_factor=4):
+    # Validate the bounding box coordinates
+    if not validate_bbox(box, image_width, image_height):
+        print("Invalid bounding box coordinates.")
+        return 0.0
     scaled_box = scale_bbox(box, downscale_factor)
     x_min, y_min, x_max, y_max = clamp_bbox(scaled_box, score_map.shape)
-    # Extract the subregion
-    bbox_scores = score_map[y_min:y_max + 1, x_min:x_max + 1]
-    # If the bounding box is empty (e.g., no valid region), return 0
+    bbox_scores = score_map[y_min : y_max + 1, x_min : x_max + 1]
     if bbox_scores.size == 0:
+        print("Warning: Bounding box has zero area. Returning confidence score 0.0.")
         return 0.0
     return float(np.mean(bbox_scores))
 
@@ -177,7 +188,7 @@ def plot_boxes(image, boxes, score_map, downscale_factor=4):
             print(f"Skipping invalid box: {box}")
             continue
         # Calculate the confidence score
-        confidence_score = calculate_score_in_bbox(score_map, box[:8], downscale_factor)
+        confidence_score = calculate_score_in_bbox(score_map, box[:8], image_width, image_height, downscale_factor)
         # Draw the bounding box and confidence score
         draw.polygon(box[:8], outline=(0, 255, 0), width=2)
 	x_coords = box[0::2]  # Even indices are x-coordinates
