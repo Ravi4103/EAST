@@ -147,12 +147,6 @@ def detect(img, model, device):
 	return adjust_ratio(boxes, ratio_w, ratio_h)
 
 def calculate_score_in_bbox(score_tensor, box):
-    """
-    Calculate the average confidence score within a bounding box.
-    :param score_tensor: Tensor containing confidence scores.
-    :param box: Bounding box coordinates [x1, y1, x2, y2].
-    :return: Average confidence score for pixels inside the bounding box.
-    """
     x_min = int(min(box[0], box[2]))
     y_min = int(min(box[1], box[3]))
     x_max = int(max(box[0], box[2]))
@@ -163,43 +157,50 @@ def calculate_score_in_bbox(score_tensor, box):
     y_min = max(0, y_min)
     x_max = min(score_tensor.shape[1] - 1, x_max)
     y_max = min(score_tensor.shape[0] - 1, y_max)
+
     # Extract the region inside the bounding box
-    bbox_scores = score_tensor[y_min:y_max+1, x_min:x_max+1]
+    bbox_scores = score_tensor[y_min:y_max + 1, x_min:x_max + 1]
+
     # Calculate and return the average score
     if bbox_scores.size == 0:
         return 0.0  # Avoid division by zero
     return float(np.mean(bbox_scores))
-	
+
+
 def plot_boxes(image, boxes, score_tensor):
-    """
-    Draw bounding boxes and confidence scores on an image.
-    :param image: PIL Image object to draw on.
-    :param boxes: List of bounding box coordinates [x1, y1, x2, y2].
-    :param score_tensor: Tensor containing confidence scores.
-    :return: PIL Image object with drawn bounding boxes.
-    """
     draw = ImageDraw.Draw(image)
     try:
         # Load a basic font for text rendering
         font = ImageFont.load_default()
     except IOError:
         font = None  # Fallback if font loading fails
-
+    # Scale factor to match image and score tensor dimensions
+    image_w, image_h = image.size
+    score_h, score_w = score_tensor.shape
+    scale_x = score_w / image_w
+    scale_y = score_h / image_h
     for box in boxes:
-        # Draw the bounding box (rectangle)
-        x1, y1, x2, y2 = box[:4]  # First 4 coordinates define the bounding box
-        draw.rectangle([x1, y1, x2, y2], outline=(0, 255, 0), width=2)
+        # Ensure bounding box coordinates are valid
+        x1, y1, x2, y2 = box[:4]
+        x_min, x_max = sorted([x1, x2])
+        y_min, y_max = sorted([y1, y2])
+        # Scale coordinates to match the score tensor dimensions
+        scaled_x_min = int(x_min * scale_x)
+        scaled_x_max = int(x_max * scale_x)
+        scaled_y_min = int(y_min * scale_y)
+        scaled_y_max = int(y_max * scale_y)
 
         # Calculate confidence score for the bounding box
-        confidence_score = calculate_score_in_bbox(score_tensor, box)
-
+        confidence_score = calculate_score_in_bbox(score_tensor,[scaled_x_min, scaled_y_min, scaled_x_max, scaled_y_max])
+        # Draw the bounding box (rectangle)
+        draw.rectangle([x_min, y_min, x_max, y_max], outline=(0, 255, 0), width=2)
         # Display the confidence score as text above the box
         score_text = f'{confidence_score:.2f}'
-        text_position = (x1, y1 - 10)  # Slightly above the top-left corner
+        text_position = (x_min, y_min - 10)  # Slightly above the top-left corner
         if font:
-            draw.text(text_position, score_text, fill=(255, 0, 0), font=font)
+            draw.text(text_position, score_text, fill=(0, 255, 0), font=font)
         else:
-            draw.text(text_position, score_text, fill=(255, 0, 0))
+            draw.text(text_position, score_text, fill=(0, 255, 0))
 
     return image
 
