@@ -164,17 +164,50 @@ def calculate_score_in_bbox(score_tensor, box):
     return float(np.mean(bbox_scores))
 
 
-def plot_boxes(img, boxes):
-    '''Plot boxes with confidence scores on the image'''
-    if boxes is None:
-        return img
-    draw = ImageDraw.Draw(img)
+def plot_boxes(image, boxes, score_tensor):
+    '''Plot boxes with confidence scores on the image.'''
+    if boxes is None or score_tensor is None:
+        return image
+    # Ensure score_tensor has the correct dimensions
+    if len(score_tensor.shape) == 3:  # [C, H, W]
+        score_tensor = score_tensor[0]  # Use the first channel
+    draw = ImageDraw.Draw(image)
+    try:
+        font = ImageFont.load_default()
+    except IOError:
+        font = None  # Fallback if font loading fails
+    image_w, image_h = image.size
+    score_h, score_w = score_tensor.shape
+    scale_x = score_w / image_w
+    scale_y = score_h / image_h
     for box in boxes:
+        # Get the bounding box coordinates
+        x_min = min(box[0], box[2], box[4], box[6])
+        y_min = min(box[1], box[3], box[5], box[7])
+        x_max = max(box[0], box[2], box[4], box[6])
+        y_max = max(box[1], box[3], box[5], box[7])
+
+        # Scale coordinates for score tensor
+        scaled_x_min = int(x_min * scale_x)
+        scaled_y_min = int(y_min * scale_y)
+        scaled_x_max = int(x_max * scale_x)
+        scaled_y_max = int(y_max * scale_y)
+
+        # Calculate the confidence score using calculate_score_in_bbox
+        confidence_score = calculate_score_in_bbox(
+            score_tensor, [scaled_x_min, scaled_y_min, scaled_x_max, scaled_y_max]
+        )
+
+        # Draw the bounding box
         draw.polygon(box[:8], outline=(0, 255, 0))
-        confidence_score = box[8]
-        text_position = (box[0], box[1] - 10)
-        draw.text(text_position, f"{confidence_score:.2f}", fill=(255, 0, 0))
-    return img
+        # Draw the confidence score
+        score_text = f'{confidence_score:.2f}'
+        text_position = (x_min, y_min - 10)  # Slightly above the box
+        if font:
+            draw.text(text_position, score_text, fill=(0, 255, 0), font=font)
+        else:
+            draw.text(text_position, score_text, fill=(0, 255, 0))
+    return image
 
 def detect_dataset(model, device, test_img_path, submit_path):
 	'''detection on whole dataset, save .txt results in submit_path
