@@ -160,7 +160,7 @@ def calculate_score_in_bbox(score_tensor, box):
 	
 	bbox_scores = score_tensor[y_min:y_max + 1, x_min:x_max + 1]
 	if bbox_scores.size == 0:
-	return 0.0
+		return 0.0
 	return float(np.mean(bbox_scores))
 
 
