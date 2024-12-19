@@ -86,7 +86,7 @@ def restore_polys(valid_pos, valid_geo, score_shape, scale=4):
 	return np.array(polys), index
 
 
-def get_boxes(score, geo, score_thresh=0.9, nms_thresh=0.2):
+def get_boxes(score, geo, score_thresh=0.25, nms_thresh=0.2):
 	'''get boxes from feature map
 	Input:
 		score       : score map from model <numpy.ndarray, (1,row,col)>
@@ -147,64 +147,34 @@ def detect(img, model, device):
 	return adjust_ratio(boxes, ratio_w, ratio_h)
 
 def calculate_score_in_bbox(score_tensor, box):
-    x_min = int(min(box[0], box[2]))
-    y_min = int(min(box[1], box[3]))
-    x_max = int(max(box[0], box[2]))
-    y_max = int(max(box[1], box[3]))
+    '''Calculate confidence score for a bounding box'''
+    x_min = int(min(box[0], box[2], box[4], box[6]))
+    y_min = int(min(box[1], box[3], box[5], box[7]))
+    x_max = int(max(box[0], box[2], box[4], box[6]))
+    y_max = int(max(box[1], box[3], box[5], box[7]))
 
-    # Ensure the bounding box is within the bounds of the score tensor
     x_min = max(0, x_min)
     y_min = max(0, y_min)
     x_max = min(score_tensor.shape[1] - 1, x_max)
     y_max = min(score_tensor.shape[0] - 1, y_max)
 
-    # Extract the region inside the bounding box
     bbox_scores = score_tensor[y_min:y_max + 1, x_min:x_max + 1]
-
-    # Calculate and return the average score
     if bbox_scores.size == 0:
-        return 0.0  # Avoid division by zero
+        return 0.0
     return float(np.mean(bbox_scores))
 
 
-def plot_boxes(image, boxes, score_tensor):
-    # Ensure score_tensor has the correct dimensions
-    if len(score_tensor.shape) == 3:  # [C, H, W]
-        score_tensor = score_tensor[0]  # Use the first channel
-    image_w, image_h = image.size
-    score_h, score_w = score_tensor.shape
-    scale_x = score_w / image_w
-    scale_y = score_h / image_h	
-    draw = ImageDraw.Draw(image)
-    try:
-        # Load a basic font for text rendering
-        font = ImageFont.load_default()
-    except IOError:
-        font = None  # Fallback if font loading fails
-        # Ensure bounding box coordinates are valid
-        x1, y1, x2, y2 = box[:4]
-        x_min, x_max = sorted([x1, x2])
-        y_min, y_max = sorted([y1, y2])
-        # Scale coordinates to match the score tensor dimensions
-        scaled_x_min = int(x_min * scale_x)
-        scaled_x_max = int(x_max * scale_x)
-        scaled_y_min = int(y_min * scale_y)
-        scaled_y_max = int(y_max * scale_y)
-
-        # Calculate confidence score for the bounding box
-        confidence_score = calculate_score_in_bbox(score_tensor,[scaled_x_min, scaled_y_min, scaled_x_max, scaled_y_max])
-        # Draw the bounding box (rectangle)
-        draw.rectangle([x_min, y_min, x_max, y_max], outline=(0, 255, 0), width=2)
-        # Display the confidence score as text above the box
-        score_text = f'{confidence_score:.2f}'
-        text_position = (x_min, y_min - 10)  # Slightly above the top-left corner
-        if font:
-            draw.text(text_position, score_text, fill=(0, 255, 0), font=font)
-        else:
-            draw.text(text_position, score_text, fill=(0, 255, 0))
-
-    return image
-
+def plot_boxes(img, boxes):
+    '''Plot boxes with confidence scores on the image'''
+    if boxes is None:
+        return img
+    draw = ImageDraw.Draw(img)
+    for box in boxes:
+        draw.polygon(box[:8], outline=(0, 255, 0))
+        confidence_score = box[8]
+        text_position = (box[0], box[1] - 10)
+        draw.text(text_position, f"{confidence_score:.2f}", fill=(255, 0, 0))
+    return img
 
 def detect_dataset(model, device, test_img_path, submit_path):
 	'''detection on whole dataset, save .txt results in submit_path
