@@ -146,7 +146,7 @@ def detect(img, model, device):
 	boxes = get_boxes(score.squeeze(0).cpu().numpy(), geo.squeeze(0).cpu().numpy())
 	return adjust_ratio(boxes, ratio_w, ratio_h)
 
-def calculate_score_in_bbox(score_tensor, box):
+def calculate_score_in_bbox(score, box):
 	'''Calculate confidence score for a bounding box'''
 	x_min = int(min(box[0], box[2], box[4], box[6]))
 	y_min = int(min(box[1], box[3], box[5], box[7]))
@@ -155,16 +155,16 @@ def calculate_score_in_bbox(score_tensor, box):
 	
 	x_min = max(0, x_min)
 	y_min = max(0, y_min)
-	x_max = min(score_tensor.shape[1] - 1, x_max)
-	y_max = min(score_tensor.shape[0] - 1, y_max)
+	x_max = min(score.shape[1] - 1, x_max)
+	y_max = min(score.shape[0] - 1, y_max)
 	
-	bbox_scores = score_tensor[y_min:y_max + 1, x_min:x_max + 1]
+	bbox_scores = score[y_min:y_max + 1, x_min:x_max + 1]
 	if bbox_scores.size == 0:
 		return 0.0
 	return float(np.mean(bbox_scores))
 
 
-def plot_boxes(image, boxes, score_tensor):
+def plot_boxes(image, boxes, score):
 	if boxes is None:
 		return image
 	draw = ImageDraw.Draw(image)
@@ -173,7 +173,7 @@ def plot_boxes(image, boxes, score_tensor):
 		    print(f"Skipping invalid box: {box}")
 		    continue
 		# Calculate the confidence score
-		confidence_score = calculate_score_in_bbox(score_tensor, box[:8])
+		confidence_score = calculate_score_in_bbox(score, box[:8])
 		# Draw the bounding box and score
 		draw.polygon(box[:8], outline=(0, 255, 0), width=2)
 		x_min = min(box[0::2])
