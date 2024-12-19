@@ -168,18 +168,19 @@ def calculate_score_in_bbox(score_tensor, box):
 
 
 def plot_boxes(image, boxes, score_tensor):
+    # Ensure score_tensor has the correct dimensions
+    if len(score_tensor.shape) == 3:  # [C, H, W]
+        score_tensor = score_tensor[0]  # Use the first channel
+    image_w, image_h = image.size
+    score_h, score_w = score_tensor.shape
+    scale_x = score_w / image_w
+    scale_y = score_h / image_h	
     draw = ImageDraw.Draw(image)
     try:
         # Load a basic font for text rendering
         font = ImageFont.load_default()
     except IOError:
         font = None  # Fallback if font loading fails
-    # Scale factor to match image and score tensor dimensions
-    image_w, image_h = image.size
-    score_h, score_w = score_tensor.shape
-    scale_x = score_w / image_w
-    scale_y = score_h / image_h
-    for box in boxes:
         # Ensure bounding box coordinates are valid
         x1, y1, x2, y2 = box[:4]
         x_min, x_max = sorted([x1, x2])
