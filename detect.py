@@ -170,7 +170,7 @@ def calculate_score_in_bbox(score_map, box, image_width, image_height, downscale
     if not validate_bbox(box, image_width, image_height):
         print("Invalid bounding box coordinates.")
         return 0.0
-    scaled_box = scale_bbox(box, downscale_factor=None)
+    scaled_box = scale_bbox(box, downscale_factor)
     x_min, y_min, x_max, y_max = clamp_bbox(scaled_box, score_map.shape)
     bbox_scores = score_map[y_min : y_max + 1, x_min : x_max + 1]
     if bbox_scores.size == 0:
