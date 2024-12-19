@@ -146,36 +146,40 @@ def detect(img, model, device):
 	boxes = get_boxes(score.squeeze(0).cpu().numpy(), geo.squeeze(0).cpu().numpy())
 	return adjust_ratio(boxes, ratio_w, ratio_h)
 
-def calculate_score_in_bbox(score, box):
-	'''Calculate confidence score for a bounding box'''
-	x_min = int(min(box[0], box[2], box[4], box[6]))
-	y_min = int(min(box[1], box[3], box[5], box[7]))
-	x_max = int(max(box[0], box[2], box[4], box[6]))
-	y_max = int(max(box[1], box[3], box[5], box[7]))
-	
-	x_min = max(0, x_min)
-	y_min = max(0, y_min)
-	x_max = min(score.shape[1] - 1, x_max)
-	y_max = min(score.shape[0] - 1, y_max)
-	
-	bbox_scores = score[y_min:y_max + 1, x_min:x_max + 1]
-	if bbox_scores.size == 0:
-		return 0.0
-	return float(np.mean(bbox_scores))
+def scale_bbox(box, downscale_factor):
+    return [coord / downscale_factor for coord in box]
+
+def clamp_bbox(box, score_map_shape):
+    x_min = max(0, int(min(box[0], box[2], box[4], box[6])))
+    y_min = max(0, int(min(box[1], box[3], box[5], box[7])))
+    x_max = min(score_map_shape[1] - 1, int(max(box[0], box[2], box[4], box[6])))
+    y_max = min(score_map_shape[0] - 1, int(max(box[1], box[3], box[5], box[7])))
+    return x_min, y_min, x_max, y_max
+
+def calculate_score_in_bbox(score_map, box, downscale_factor=4):
+    # Rescale and clamp the bounding box
+    scaled_box = scale_bbox(box, downscale_factor)
+    x_min, y_min, x_max, y_max = clamp_bbox(scaled_box, score_map.shape)
+    # Extract the subregion
+    bbox_scores = score_map[y_min:y_max + 1, x_min:x_max + 1]
+    # If the bounding box is empty (e.g., no valid region), return 0
+    if bbox_scores.size == 0:
+        return 0.0
+    return float(np.mean(bbox_scores))
 
 
-def plot_boxes(image, boxes, score):
+def plot_boxes(image, boxes, score_map, downscale_factor=4):
 	if boxes is None:
-		return image
-	draw = ImageDraw.Draw(image)
+        	return image
+    	draw = ImageDraw.Draw(image)
 	for box in boxes:
 		if len(box) < 8:
 		    print(f"Skipping invalid box: {box}")
 		    continue
 		# Calculate the confidence score
-		confidence_score = calculate_score_in_bbox(score, box[:8])
-		# Draw the bounding box and score
-		draw.polygon(box[:8], outline=(0, 255, 0), width=2)
+		confidence_score = calculate_score_in_bbox(score_map, box[:8], downscale_factor)
+		# Draw the bounding box and confidence score
+		draw.polygon(box[:8], outline=(0, 255, 0), width=3)
 		x_min = min(box[0::2])
 		y_min = min(box[1::2])
 		draw.text((x_min, y_min - 10), f"{confidence_score:.2f}", fill=(0, 255, 0))
