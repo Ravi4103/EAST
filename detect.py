@@ -169,16 +169,16 @@ def plot_boxes(image, boxes, score_tensor):
 		return image
 	draw = ImageDraw.Draw(image)
 	for box in boxes:
-	if len(box) < 8:
-	    print(f"Skipping invalid box: {box}")
-	    continue
-	# Calculate the confidence score
-	confidence_score = calculate_score_in_bbox(score_tensor, box[:8])
-	# Draw the bounding box and score
-	draw.polygon(box[:8], outline=(0, 255, 0), width=2)
-	x_min = min(box[0::2])
-	y_min = min(box[1::2])
-	draw.text((x_min, y_min - 10), f"{confidence_score:.2f}", fill=(0, 255, 0))
+		if len(box) < 8:
+		    print(f"Skipping invalid box: {box}")
+		    continue
+		# Calculate the confidence score
+		confidence_score = calculate_score_in_bbox(score_tensor, box[:8])
+		# Draw the bounding box and score
+		draw.polygon(box[:8], outline=(0, 255, 0), width=2)
+		x_min = min(box[0::2])
+		y_min = min(box[1::2])
+		draw.text((x_min, y_min - 10), f"{confidence_score:.2f}", fill=(0, 255, 0))
 	return image
 
 def detect_dataset(model, device, test_img_path, submit_path):
