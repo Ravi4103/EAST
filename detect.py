@@ -165,7 +165,7 @@ def clamp_bbox(box, score_map_shape):
     y_max = min(score_map_shape[0] - 1, int(max(box[1], box[3], box[5], box[7])))
     return x_min, y_min, x_max, y_max
 
-def calculate_score_in_bbox(score_map, box, image_width, image_height, downscale_factor=None):
+def calculate_score_in_bbox(score_map, box, image_width, image_height, downscale_factor):
     # Validate the bounding box coordinates
     if not validate_bbox(box, image_width, image_height):
         print("Invalid bounding box coordinates.")
@@ -179,7 +179,7 @@ def calculate_score_in_bbox(score_map, box, image_width, image_height, downscale
     return float(np.mean(bbox_scores))
 
 
-def plot_boxes(image, boxes, score_map, image_width, image_height, downscale_factor=None):
+def plot_boxes(image, boxes, score_map, image_width, image_height, downscale_factor):
     if boxes is None:
         return image
     draw = ImageDraw.Draw(image)
