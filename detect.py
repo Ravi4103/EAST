@@ -156,23 +156,28 @@ def validate_bbox(bbox, image_width, image_height):
     return True  # Bounding box is valid
 
 def scale_bbox(box, downscale_factor):
+    if downscale_factor == 0:
+        print("Warning: downscale_factor is 0. Skipping scaling.")
+        return box
     return [coord / downscale_factor for coord in box]
 
-def clamp_bbox(box, score_map_shape):
-    x_min = max(0, int(min(box[0], box[2], box[4], box[6])))
-    y_min = max(0, int(min(box[1], box[3], box[5], box[7])))
-    x_max = min(score_map_shape[1] - 1, int(max(box[0], box[2], box[4], box[6])))
-    y_max = min(score_map_shape[0] - 1, int(max(box[1], box[3], box[5], box[7])))
+def clamp_bbox(box, score_map_shape, margin=2): 
+    x_min = max(0, int(min(box[0], box[2], box[4], box[6])) - margin)
+    y_min = max(0, int(min(box[1], box[3], box[5], box[7])) - margin)
+    x_max = min(score_map_shape[1] - 1, int(max(box[0], box[2], box[4], box[6])) + margin)
+    y_max = min(score_map_shape[0] - 1, int(max(box[1], box[3], box[5], box[7])) + margin)
     return x_min, y_min, x_max, y_max
 
 def calculate_score_in_bbox(score_map, box, image_width, image_height, downscale_factor):
-    # Validate the bounding box coordinates
     if not validate_bbox(box, image_width, image_height):
         print("Invalid bounding box coordinates.")
         return 0.0
     scaled_box = scale_bbox(box, downscale_factor)
     x_min, y_min, x_max, y_max = clamp_bbox(scaled_box, score_map.shape)
-    bbox_scores = score_map[y_min : y_max + 1, x_min : x_max + 1]
+    if x_min >= x_max or y_min >= y_max:  # Check for zero area after clamping
+        print("Warning: Bounding box has zero area after clamping. Returning confidence score 0.0.")
+        return 0.0
+    bbox_scores = score_map[y_min:y_max + 1, x_min:x_max + 1]
     if bbox_scores.size == 0:
         print("Warning: Bounding box has zero area. Returning confidence score 0.0.")
         return 0.0
@@ -187,17 +192,15 @@ def plot_boxes(image, boxes, score_map, image_width, image_height, downscale_fac
         if len(box) < 8:
             print(f"Skipping invalid box: {box}")
             continue
-        # Calculate the confidence score
-        confidence_score = calculate_score_in_bbox(score_map, box[:8], image_width, image_height, downscale_factor)
-        # Draw the bounding box
-        draw.polygon(box[:8], outline=(0, 255, 0), width=2)
-        # Calculate the centroid of the bounding box
-        x_coords = box[0::2]  # Even indices are x-coordinates
-        y_coords = box[1::2]  # Odd indices are y-coordinates
-        centroid_x = sum(x_coords) / len(x_coords)
-        centroid_y = sum(y_coords) / len(y_coords)
-        # Draw the confidence score at the centroid
-        draw.text((centroid_x, centroid_y - 10), f"{confidence_score:.2f}", fill=(255, 0, 0))
+        confidence_score = calculate_score_in_bbox(score_map, box, image_width, image_height, downscale_factor)
+        # Check if confidence score is valid before drawing
+        if confidence_score > 0:  # Or another threshold if needed
+            draw.polygon(box[:8], outline=(0, 255, 0), width=2)
+            x_coords = box[0::2]
+            y_coords = box[1::2]
+            centroid_x = sum(x_coords) / len(x_coords)
+            centroid_y = sum(y_coords) / len(y_coords)
+            draw.text((centroid_x, centroid_y - 10), f"{confidence_score:.2f}", fill=(0, 255, 0))
     return image
 
 def detect_dataset(model, device, test_img_path, submit_path):
